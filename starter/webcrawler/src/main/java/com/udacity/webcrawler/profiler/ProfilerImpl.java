@@ -3,6 +3,8 @@ package com.udacity.webcrawler.profiler;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZonedDateTime;
@@ -32,8 +34,29 @@ final class ProfilerImpl implements Profiler {
     // TODO: Use a dynamic proxy (java.lang.reflect.Proxy) to "wrap" the delegate in a
     //       ProfilingMethodInterceptor and return a dynamic proxy from this method.
     //       See https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Proxy.html.
+    if(doesClassContainMethodAnnotatedWithProfiledAnnotation(klass)){
+      throw new IllegalArgumentException("The class = " + klass.getName() + "does not" +
+              "contain any method annotated with @Profiled annotation");
+    }
+    T proxyInstance = (T) Proxy.newProxyInstance(
+            ProfilerImpl.class.getClassLoader(),
+            new Class[] {klass},
+            new ProfilingMethodInterceptor(clock, delegate, state)
+    );
+    return proxyInstance;
+    //return delegate;
+  }
 
-    return delegate;
+  private <T> boolean doesClassContainMethodAnnotatedWithProfiledAnnotation(Class<T> klass) {
+    boolean hasProfiledAnnotationExistWithinMethods = false;
+    Method [] methods = klass.getDeclaredMethods();
+    for(Method method : methods){
+      if(method.isAnnotationPresent(Profiled.class)){
+        hasProfiledAnnotationExistWithinMethods = true;
+        break;
+      }
+    }
+    return hasProfiledAnnotationExistWithinMethods;
   }
 
   @Override
