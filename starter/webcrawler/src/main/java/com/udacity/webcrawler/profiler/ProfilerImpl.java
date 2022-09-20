@@ -5,7 +5,10 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -34,20 +37,22 @@ final class ProfilerImpl implements Profiler {
     // TODO: Use a dynamic proxy (java.lang.reflect.Proxy) to "wrap" the delegate in a
     //       ProfilingMethodInterceptor and return a dynamic proxy from this method.
     //       See https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Proxy.html.
-    if(doesClassContainMethodAnnotatedWithProfiledAnnotation(klass)){
-      throw new IllegalArgumentException("The class = " + klass.getName() + "does not" +
+    if(!doesClassContainMethodAnnotatedWithProfiledAnnotation(klass, Profiled.class)) {
+      throw new IllegalArgumentException("The class = " + klass.getName() + " does not " +
               "contain any method annotated with @Profiled annotation");
     }
+
     T proxyInstance = (T) Proxy.newProxyInstance(
             ProfilerImpl.class.getClassLoader(),
-            new Class[] {klass},
+            new Class[] { klass },
             new ProfilingMethodInterceptor(clock, delegate, state)
     );
+
     return proxyInstance;
-    //return delegate;
+//    return delegate;
   }
 
-  private <T> boolean doesClassContainMethodAnnotatedWithProfiledAnnotation(Class<T> klass) {
+  private <T> boolean doesClassContainMethodAnnotatedWithProfiledAnnotation(Class<T> klass, Class<Profiled> profiledClass) {
     boolean hasProfiledAnnotationExistWithinMethods = false;
     Method [] methods = klass.getDeclaredMethods();
     for(Method method : methods){
@@ -60,9 +65,23 @@ final class ProfilerImpl implements Profiler {
   }
 
   @Override
-  public void writeData(Path path) {
+  public void writeData(Path path) throws IOException {
     // TODO: Write the ProfilingState data to the given file path. If a file already exists at that
     //       path, the new data should be appended to the existing file.
+    Writer writer = null;
+    try {
+      writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+    } catch (IOException e) {
+      throw new IOException(e.getMessage());
+    } finally {
+      if(writer != null){
+        try{
+          writer.close();
+        } catch(IOException ioe){
+          throw new IOException(ioe.getMessage());
+        }
+      }
+    }
   }
 
   @Override

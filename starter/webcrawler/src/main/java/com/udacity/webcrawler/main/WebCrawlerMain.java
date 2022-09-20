@@ -45,6 +45,19 @@ public final class WebCrawlerMain {
       resultWriter.write(writer);
     }
     // TODO: Write the profile data to a text file (or System.out if the file name is empty)
+    if(isPathValid(config.getProfileOutputPath())){
+      profiler.writeData(Path.of(config.getProfileOutputPath()));
+    } else{
+      Writer writer = new OutputStreamWriter(System.out);
+      profiler.writeData(writer);
+    }
+  }
+
+  private boolean isPathValid(String pathString) {
+    boolean isValid = true;
+    if(pathString == null || pathString.trim().length() == 0)
+      isValid = false;
+    return isValid;
   }
 
   private boolean isPathStringValid(String pathString) {

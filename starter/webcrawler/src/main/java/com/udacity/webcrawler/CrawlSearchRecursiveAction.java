@@ -14,6 +14,8 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Pattern;
 
+import static java.lang.Shutdown.lock;
+
 public class CrawlSearchRecursiveAction extends RecursiveAction {
     private String url;
     private Clock clock;
@@ -59,10 +61,16 @@ public class CrawlSearchRecursiveAction extends RecursiveAction {
                 return subLinks;
             }
         }
-        if (visitedUrls.contains(urlLink)) {
-            return subLinks;
+        try {
+            lock.lock();
+            if (visitedUrls.contains(urlLink)) {
+                // return empty result
+            }
+            visitedUrls.add(urlLink);
+            // process URL and return
+        } finally {
+            lock.unlock();
         }
-        visitedUrls.add(urlLink);
         PageParser.Result result = parserFactory.get(urlLink).parse();
         for (Map.Entry<String, Integer> e : result.getWordCounts().entrySet()) {
             if (counts.containsKey(e.getKey())) {
